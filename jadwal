@@ -1,0 +1,81 @@
+#!/bin/bash
+
+JADWAL="$HOME"/Syncthing_stuff/jadwal2
+help() {
+	echo "
+jadwal:
+  -t            Tomorrow
+  -y            Yesterday
+  -d [day name] Print the specific day"
+	exit
+}
+
+tomorrow() {
+	now=$(date --date='tomorrow' +'%A')
+	printJadwal $now
+}
+
+yesterday() {
+	now=$(date --date='yesterday' +'%A')
+	printJadwal $now
+}
+
+day() {
+	now=$1
+	printJadwal $now
+}
+
+today() {
+	now=$(date +'%A')
+	printJadwal $now
+}
+
+printJadwal() {
+	if [[ -n $JADWAL ]]; then
+		if [[ -f "$JADWAL"/$1.txt ]]; then
+			wawk "$JADWAL"/$1.txt
+		else
+			echo "You are free today, have fun"
+		fi
+		exit
+	fi
+
+	if [[ -d ~/.config/jadwal/ ]]; then
+		cat ~/.config/jadwal/$1.txt
+		exit
+	fi
+}
+
+wawk() {
+	num=0
+	while IFS='' read -r LINE; do
+		num=$(($num + 1))
+		[ $num -lt 6 ] || [ $num -eq $(cat $1 | wc -l) ] && continue
+		col=$(echo $LINE | awk 'BEGIN {FS = "|"} {print $2}')
+		time=$(echo $col | awk 'BEGIN {FS = "-"} {print $2}')
+		[ $((10#$(echo $time | awk 'BEGIN {FS = ":"} {print $1}'))) -gt $(date +%H) ] && break
+	done <$1
+	line="$(cat $1 | sed -n "${num}p") <- current"
+	[ $num -eq $(cat $1 | wc -l) ] && cat $1 || cat $1 | sed "${num} c\\${line}"
+}
+
+while getopts ":htyd:" opt; do
+	case $opt in
+	h) help ;;
+	t) tomorrow ;;
+	y) yesterday ;;
+	d)
+		day $OPTARG
+		;;
+	:)
+		echo "-d require an argument"
+		exit 1
+		;;
+	\?)
+		echo "Invalid parameter, --help for info of available parameter"
+		exit 1
+		;;
+	esac
+done
+
+today
