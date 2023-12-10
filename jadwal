@@ -33,7 +33,7 @@ today() {
 printJadwal() {
 	if [[ -n $JADWAL ]]; then
 		if [[ -f "$JADWAL"/$1.txt ]]; then
-			wawk "$JADWAL"/$1.txt
+			wawk "$JADWAL"/$1.txt $1
 		else
 			echo "You are free today, have fun"
 		fi
@@ -53,10 +53,16 @@ wawk() {
 		[ $num -lt 6 ] || [ $num -eq $(cat $1 | wc -l) ] && continue
 		col=$(echo $LINE | awk 'BEGIN {FS = "|"} {print $2}')
 		time=$(echo $col | awk 'BEGIN {FS = "-"} {print $2}')
-		[ $((10#$(echo $time | awk 'BEGIN {FS = ":"} {print $1}'))) -gt $(date +%H) ] && break
+		hour=$((10#$(echo $time | awk 'BEGIN {FS = ":"} {print $1}')))
+		unixtime=$(date -d $time +%s)
+		[ $unixtime -gt $(date +%s) ] && break
 	done <$1
 	line="$(cat $1 | sed -n "${num}p") <- current"
-	[ $num -eq $(cat $1 | wc -l) ] && cat $1 || cat $1 | sed "${num} c\\${line}"
+	if [ $num -eq $(cat $1 | wc -l) ] || [ $2 != $(date +%A) ]; then
+		cat $1
+	else
+		cat $1 | sed "${num} c\\${line}"
+	fi
 }
 
 while getopts ":htyd:" opt; do
